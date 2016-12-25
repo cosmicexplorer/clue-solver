@@ -1,0 +1,19 @@
+#+TITLE: clue-solver
+
+Because I'm a sore loser.
+
+* TODO tasks [0/2]
+- [ ] read config [0/2]
+  - [ ] get all cards with names (same for all games)
+  - [ ] get ~k_i~ for each player
+- [ ] implement ops [0/3]
+  - [ ] known-card
+  - [ ] failed-query
+  - [ ] successful-query
+
+* future
+- suggest query
+  - requires a room, which requires knowledge of the game board and probabilities on getting to each point
+
+* License
+[[file:GPL.md][GPL]]
