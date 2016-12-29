@@ -1,11 +1,12 @@
 #+TITLE: clue-solver
+#+STARTUP: showall
 
 Because I'm a sore loser.
 
-* TODO tasks [0/2]
-- [ ] read config [0/2]
-  - [ ] get all cards with names (same for all games)
-  - [ ] get ~k_i~ for each player
+* TODO tasks [1/2]
+- [X] read config [2/2]
+  - [X] get all cards with names (same for all games)
+  - [X] get ~k_i~ for each player
 - [ ] implement ops [0/3]
   - [ ] known-card
   - [ ] failed-query
@@ -13,7 +14,7 @@ Because I'm a sore loser.
 
 * future
 - suggest query
-  - requires a room, which requires knowledge of the game board and probabilities on getting to each point
+  - suggestion includes a room, which requires knowledge of the game board and probabilities on getting to each point
 
 * License
 [[file:GPL.md][GPL]]
