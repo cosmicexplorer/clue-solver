@@ -33,9 +33,11 @@ type KMap = Map.Map String Integer
 type KMapP = Either String KMap
 
 validatePlayer :: KMap -> SNum -> KMapP
-validatePlayer mp (name, k) = if (k > 0) && not (Map.member name mp)
-  then Right $ Map.insert name k mp
-  else Left $ "player '" ++ name ++ "' already exists with k=" ++ show k
+validatePlayer mp (name, k) =
+  if k <= 0 then Left $ "player '" ++ name ++ "' has invalid k=" ++ show k
+  else maybe (Right $ Map.insert name k mp) nexists (Map.lookup name mp)
+  where nexists x = Left (
+          "player '" ++ name ++ "' already exists with k=" ++ show x)
 
 type NumberAndLine = (Integer, String)
 
