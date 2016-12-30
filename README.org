@@ -9,6 +9,10 @@ Because I'm a sore loser.
   - [X] get ~k_i~ for each player
 - [ ] make something to generate ~deriving~ clauses for simple newtype wrappers
   - see [[file:src/Lib.hs][Lib.hs]]
+  - when done answer [[https://stackoverflow.com/questions/30684755/is-there-a-way-to-find-all-typeclasses-of-type-in-template-haskell][this so question]]
+  - examples (outdated)
+    - https://wiki.haskell.org/Template_haskell/Instance_deriving_example
+    - https://wiki.haskell.org/A_practical_Template_Haskell_Tutorial
 - [ ] implement ops [0/3]
   - [ ] known-card
   - [ ] failed-query
