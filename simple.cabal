@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.org
 homepage:            https://github.com/cosmicexplorer/clue-solver
-license:             GPL3
+license:             GPL-3
 license-file:        GPL.md
 author:              Danny McClanahan
 maintainer:          danieldmcclanahan@gmail.com
@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Lib
+                     , ConfigGame
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , text

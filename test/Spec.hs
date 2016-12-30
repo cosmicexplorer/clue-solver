@@ -2,14 +2,14 @@ import Test.HUnit
 
 import Control.Monad
 
-import Lib
+import ConfigGame
 
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 
 test1 = TestCase (
   assertEqual "reads a cards file" mock =<< getCardTags "test/test-input")
-  where mock = (Set.fromList . map show $ [1,2,4,6,9])
+  where mock = Set.fromList . map show $ [1,2,4,6,9]
 
 
 test2 = TestCase (

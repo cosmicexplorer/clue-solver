@@ -12,6 +12,30 @@ Because I'm a sore loser.
   - [ ] failed-query
   - [ ] successful-query
 
+* repl
+1. read in query (no player number)
+   - then read in failures until success
+2. display known cards of every player
+
+*** Query format
+~q:<card_1>,<card_2>,...~
+
+*(realistically, there will only be 3 cards in each query)*
+
+~<card_i>~ is the string representation of a card, read from ~getCardTags~
+
+*** failure/success format
+- failure :: ~f:<num>~
+- success (card not known) :: ~s:<num>~
+  - i.e. if you did not make the query
+- success (card known) :: ~c:<num>~
+  - i.e. if you did make the query
+
+Where ~<num>~ is the number of the player responding to the query.
+
+*** display known format
+~d~
+
 * future
 - suggest query
   - suggestion includes a room, which requires knowledge of the game board and probabilities on getting to each point
