@@ -3,10 +3,12 @@
 
 Because I'm a sore loser.
 
-* TODO tasks [1/2]
+* TODO tasks [1/3]
 - [X] read config [2/2]
   - [X] get all cards with names (same for all games)
   - [X] get ~k_i~ for each player
+- [ ] make something to generate ~deriving~ clauses for simple newtype wrappers
+  - see [[file:src/Lib.hs][Lib.hs]]
 - [ ] implement ops [0/3]
   - [ ] known-card
   - [ ] failed-query

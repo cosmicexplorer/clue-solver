@@ -21,6 +21,7 @@ library
                      , containers
                      , text
                      , regex-compat
+                     , template-haskell
   default-language:    Haskell2010
 
 executable simple-exe
