@@ -1,4 +1,7 @@
+{-# LANGUAGE TemplateHaskell #-}
 module ConfigGame where
+
+import Lib
 
 import Data.Maybe
 import Control.Monad
@@ -8,6 +11,7 @@ import qualified Data.Map.Strict as Map
 
 newtype Card = Card String
   deriving (Ord, Eq, Show)
+$(autoDeriveAll ''Card)
 
 getCardTags :: FilePath -> IO (Set.Set Card)
 getCardTags p = Set.fromList . map Card . lines <$> readFile p
@@ -34,6 +38,7 @@ parseLine num line = case joined of
 
 newtype PlayerName = PlayerName String
   deriving (Eq, Ord, Show)
+
 newtype PlayerK = PlayerK Integer
   deriving (Eq, Ord, Show)
 
