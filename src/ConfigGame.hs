@@ -1,7 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
 module ConfigGame where
-
-import Lib
 
 import Data.Maybe
 import Control.Monad
@@ -11,10 +8,12 @@ import qualified Data.Map.Strict as Map
 
 newtype Card = Card String
   deriving (Ord, Eq, Show)
-$(autoDeriveAll ''Card)
 
-getCardTags :: FilePath -> IO (Set.Set Card)
-getCardTags p = Set.fromList . map Card . lines <$> readFile p
+newtype AllCardSet = AllCardSet (Set.Set Card)
+  deriving (Ord, Eq, Show)
+
+getCardTags :: FilePath -> IO AllCardSet
+getCardTags p = AllCardSet . Set.fromList . map Card . lines <$> readFile p
 
 playerKRegex :: Regex
 playerKRegex = mkRegexWithOpts "^([^,]*),(.*)$" False True
