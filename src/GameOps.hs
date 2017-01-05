@@ -18,24 +18,22 @@ type AllPlayerStates = Map.Map PlayerName PlayerState
 
 data PlayerState = Intermediate KnownCards PlayerK PossibleSets
                  | Complete KnownCards
-newtype GameState = GameState AllPlayerStates
+data GameState =
+  GameState AllPlayerStates ValidateCardOpts ValidatePlayerOpts
 
 data CommandResult = CommandResult GameState String
 
-line :: ValidateCardOpts -> ValidatePlayerOpts -> GenParser Char st String
-line copts popts = (
-  Prim.try (query copts) <|>
-  Prim.try (failure popts) <|>
-  Prim.try (success popts) <|>
-  Prim.try (cardKnown copts popts) <|>
-  Prim.try display
+line :: GameState -> GenParser Char st ReplOrError
+line s = (
+  Prim.try (query s) <|>
+  Prim.try (failure s) <|>
+  Prim.try (success s) <|>
+  Prim.try (cardKnown s) <|>
+  Prim.try (display s)
   ) <* eof
 
 eol :: GenParser Char st Char
 eol = char '\n'
-
-parseRepl :: ValidateCardOpts -> ValidatePlayerOpts -> String -> Either ParseError String
-parseRepl copts popts = parse (line copts popts) "(lol)"
 
 newtype LevenDist = LevenDist Int
   deriving (Eq, Show, Ord)
@@ -106,7 +104,7 @@ makeAllSimilarCardsMsg (cals, cs) = case cals of
   x -> Left $ intercalate "\n" $ map makeMsg cals
   where makeMsg (CardAndAlternatives c alts) = makeSimilarCardsMsg alts c
 
-query :: ValidateCardOpts -> GenParser Char st String
+query :: GameState -> GenParser Char st ReplOrError
 query opts = result >>= either unexpected (parserReturn . format)
   where cards = string "q:" *> sepBy1 (many $ noneOf ",\n") (char ',')
         unique slst = case uniqueList $ map Card slst of
@@ -129,25 +127,29 @@ validPlayer (ValidatePlayerOpts set) name
 unplayer :: PlayerName -> String
 unplayer (PlayerName s) = s
 
-failure :: ValidatePlayerOpts -> GenParser Char st String
+failure :: GameState -> GenParser Char st ReplOrError
 failure opts = valid >>= either unexpected (parserReturn . failFormat)
   where p = string "f:" *> many (noneOf "\n")
         valid = validPlayer opts . PlayerName <$> p
         failFormat = printf "fail:<%s>" . unplayer
 
-success :: ValidatePlayerOpts -> GenParser Char st String
+success :: GameState -> GenParser Char st ReplOrError
 success opts = valid >>= either unexpected (parserReturn . successFormat)
   where p = string "s:" *> many (noneOf "\n")
         valid = validPlayer opts . PlayerName <$> p
         successFormat = printf "success:<%s>" . unplayer
 
-cardKnown :: ValidateCardOpts -> ValidatePlayerOpts -> GenParser Char st String
-cardKnown copts popts = p >>= either unexpected (parserReturn . cardKnownFmt)
+unwrapState :: (GameState -> a) -> (a -> b) -> GameState -> b
+unwrapState tr orig = orig . tr
+
+cardKnown :: GameState -> GenParser Char st ReplOrError
+cardKnown gs = p >>= either unexpected (parserReturn . cardKnownFmt)
   where validate c n = do
           card <- validateCard makeSimilarMsg copts (Card c)
           name <- validPlayer popts . PlayerName $ n
           return (card, name)
         makeSimilarMsg (CardAndAlternatives c cs) = makeSimilarCardsMsg cs c
+        (GameState pm copts popts) = gs
         (ValidateCardOpts (AllCardSet cset) _) = copts
         p = do
           string "c:"
@@ -158,5 +160,17 @@ cardKnown copts popts = p >>= either unexpected (parserReturn . cardKnownFmt)
         cardKnownFmt (Card c, PlayerName n) =
           printf "known: card=%s,name=%s" c n
 
-display :: GenParser Char st String
-display = string "d" *> parserReturn "display"
+addKnownCard :: PlayerState -> Card -> Either String PlayerState
+addKnownCard ps c = case ps of
+  Intermediate sc k ps -> Right $ Intermediate (Set.insert c sc) k ps
+  Complete kc -> if (Set.member c kc) then impossible else Right $ ps
+    where impossible = Left $ printf "invalid card '%s'; impossible" $ uncard c
+
+display :: GameState -> GenParser Char st ReplOrError
+display s = (string "d") *> (parserReturn $ ReplOutput "display" s)
+
+data ReplOutput = ReplOutput String GameState
+type ReplOrError = Either String ReplOutput
+
+parseRepl :: GameState -> String -> Either ParseError ReplOrError
+parseRepl gs s = parse (line gs) "(lol)" s
