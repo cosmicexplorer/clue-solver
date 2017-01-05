@@ -8,6 +8,7 @@ import Text.Printf
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 
+import Text.Parsec.Prim as Prim
 import Text.ParserCombinators.Parsec
 import Text.EditDistance
 
@@ -21,11 +22,17 @@ newtype GameState = GameState AllPlayerStates
 
 data CommandResult = CommandResult GameState String
 
-repl :: ValidateCardOpts -> GenParser Char st [String]
-repl opts = many (line opts) <* eof
-
 line :: ValidateCardOpts -> GenParser Char st String
-line opts = query opts <|> many (noneOf "\n") <* eol
+line opts = (
+  Prim.try (query opts) <|>
+  many (noneOf "\n")
+  ) <* eof
+
+eol :: GenParser Char st Char
+eol = char '\n'
+
+parseRepl :: ValidateCardOpts -> String -> Either ParseError String
+parseRepl opts = parse (line opts) "(lol)"
 
 newtype LevenDist = LevenDist Int
   deriving (Eq, Show, Ord)
@@ -97,18 +104,16 @@ makeAllSimilarCardsMsg (cals, cs) = case cals of
   where makeMsg (CardAndAlternatives c alts) = makeSimilarCardsMsg c alts
 
 query :: ValidateCardOpts -> GenParser Char st String
-query opts = (++) "query:" . intercalate "," . map (\s -> "<" ++ s ++ ">") <$> cards
-  where cards = string "q:" *> sepBy1 (many $ noneOf ",\n") (char ',') <* eol
+query opts = result >>= either parserFail (parserReturn . format)
+  where cards = string "q:" *> sepBy1 (many $ noneOf ",\n") (char ',')
         unique slst = case uniqueList $ map Card slst of
           Left s -> Left $ makeDupCardsMsg s
           Right x -> Right x
         parted = makeAllSimilarCardsMsg . splitMap (validateCard opts)
         result = (=<<) parted . unique <$> cards
-
-eol :: GenParser Char st Char
-eol = char '\n'
-
-parseRepl :: ValidateCardOpts -> String -> Either ParseError [String]
-parseRepl opts = parse (repl opts) "(lol)"
+        format = (++) "query:" .
+          intercalate "," .
+          map ((\s -> "<" ++ s ++ ">") . uncard) .
+          Set.toList
 
 -- parseCommand :: String -> GameState -> CommandResult
