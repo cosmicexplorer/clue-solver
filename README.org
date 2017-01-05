@@ -3,10 +3,11 @@
 
 Because I'm a sore loser.
 
-* TODO tasks [1/2]
+* TODO tasks [2/3]
 - [X] read config [2/2]
   - [X] get all cards with names (same for all games)
   - [X] get ~k_i~ for each player
+- [X] implement parsing for commands
 - [ ] implement ops [0/3]
   - [ ] known-card
   - [ ] failed-query

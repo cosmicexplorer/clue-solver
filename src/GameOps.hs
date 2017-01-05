@@ -1,4 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
 module GameOps where
 
 import ConfigGame
@@ -28,7 +27,8 @@ line copts popts = (
   Prim.try (query copts) <|>
   Prim.try (failure popts) <|>
   Prim.try (success popts) <|>
-  Prim.try (cardKnown copts popts)
+  Prim.try (cardKnown copts popts) <|>
+  Prim.try display
   ) <* eof
 
 eol :: GenParser Char st Char
@@ -157,3 +157,6 @@ cardKnown copts popts = p >>= either unexpected (parserReturn . cardKnownFmt)
           return $ validate card name
         cardKnownFmt (Card c, PlayerName n) =
           printf "known: card=%s,name=%s" c n
+
+display :: GenParser Char st String
+display = string "d" *> parserReturn "display"
