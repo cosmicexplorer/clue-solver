@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 module GameOps where
 
 import ConfigGame
@@ -22,17 +23,19 @@ newtype GameState = GameState AllPlayerStates
 
 data CommandResult = CommandResult GameState String
 
-line :: ValidateCardOpts -> GenParser Char st String
-line opts = (
-  Prim.try (query opts) <|>
-  many (noneOf "\n")
+line :: ValidateCardOpts -> ValidatePlayerOpts -> GenParser Char st String
+line copts popts = (
+  Prim.try (query copts) <|>
+  Prim.try (failure popts) <|>
+  Prim.try (success popts) <|>
+  Prim.try (cardKnown copts popts)
   ) <* eof
 
 eol :: GenParser Char st Char
 eol = char '\n'
 
-parseRepl :: ValidateCardOpts -> String -> Either ParseError String
-parseRepl opts = parse (line opts) "(lol)"
+parseRepl :: ValidateCardOpts -> ValidatePlayerOpts -> String -> Either ParseError String
+parseRepl copts popts = parse (line copts popts) "(lol)"
 
 newtype LevenDist = LevenDist Int
   deriving (Eq, Show, Ord)
@@ -57,10 +60,10 @@ findLevenAlternatives (ValidateCardOpts set dist) (Card c) =
         fixedDist = getLevenDist dist
         similar (Card d) = fixedDist >= levenshteinDistance defaultEditCosts d c
 
-validateCard :: ValidateCardOpts -> Card -> Either CardAndAlternatives Card
-validateCard opts card
+validateCard :: (CardAndAlternatives -> t) -> ValidateCardOpts -> Card -> Either t Card
+validateCard f opts card
   | Set.notMember card allCards =
-    Left $ CardAndAlternatives card $ findLevenAlternatives opts card
+    Left . f $ CardAndAlternatives card $ findLevenAlternatives opts card
   | otherwise = Right card
   where AllCardSet allCards = set opts
 
@@ -91,8 +94,8 @@ makeDupCardsMsg :: Set.Set Card -> String
 makeDupCardsMsg set = printf "The following cards were duplicated: [%s]" setstr
   where setstr = intercalate "," $ map uncard . Set.toList $ set
 
-makeSimilarCardsMsg :: Card -> Set.Set Card -> String
-makeSimilarCardsMsg (Card c) set =
+makeSimilarCardsMsg :: Set.Set Card -> Card -> String
+makeSimilarCardsMsg set (Card c) =
   printf "card '%s' was not found; did you mean: [%s]?" c setstr
   where setstr = intercalate "," $ map uncard . Set.toList $ set
         uncard (Card d) = d
@@ -101,19 +104,56 @@ makeAllSimilarCardsMsg :: ([CardAndAlternatives], [Card]) -> Either String (Set.
 makeAllSimilarCardsMsg (cals, cs) = case cals of
   [] -> Right $ Set.fromList cs
   x -> Left $ intercalate "\n" $ map makeMsg cals
-  where makeMsg (CardAndAlternatives c alts) = makeSimilarCardsMsg c alts
+  where makeMsg (CardAndAlternatives c alts) = makeSimilarCardsMsg alts c
 
 query :: ValidateCardOpts -> GenParser Char st String
-query opts = result >>= either parserFail (parserReturn . format)
+query opts = result >>= either unexpected (parserReturn . format)
   where cards = string "q:" *> sepBy1 (many $ noneOf ",\n") (char ',')
         unique slst = case uniqueList $ map Card slst of
           Left s -> Left $ makeDupCardsMsg s
           Right x -> Right x
-        parted = makeAllSimilarCardsMsg . splitMap (validateCard opts)
+        parted = makeAllSimilarCardsMsg . splitMap (validateCard id opts)
         result = (=<<) parted . unique <$> cards
-        format = (++) "query:" .
+        format = printf "query: %s" .
           intercalate "," .
-          map ((\s -> "<" ++ s ++ ">") . uncard) .
+          map (printf "<%s>" . uncard) .
           Set.toList
 
--- parseCommand :: String -> GameState -> CommandResult
+data ValidatePlayerOpts = ValidatePlayerOpts (Set.Set PlayerName)
+
+validPlayer :: ValidatePlayerOpts -> PlayerName -> Either String PlayerName
+validPlayer (ValidatePlayerOpts set) name
+  | Set.member name set = Right name
+  | otherwise = Left $ printf "player %s' not found"
+
+unplayer :: PlayerName -> String
+unplayer (PlayerName s) = s
+
+failure :: ValidatePlayerOpts -> GenParser Char st String
+failure opts = valid >>= either unexpected (parserReturn . failFormat)
+  where p = string "f:" *> many (noneOf "\n")
+        valid = validPlayer opts . PlayerName <$> p
+        failFormat = printf "fail:<%s>" . unplayer
+
+success :: ValidatePlayerOpts -> GenParser Char st String
+success opts = valid >>= either unexpected (parserReturn . successFormat)
+  where p = string "s:" *> many (noneOf "\n")
+        valid = validPlayer opts . PlayerName <$> p
+        successFormat = printf "success:<%s>" . unplayer
+
+cardKnown :: ValidateCardOpts -> ValidatePlayerOpts -> GenParser Char st String
+cardKnown copts popts = p >>= either unexpected (parserReturn . cardKnownFmt)
+  where validate c n = do
+          card <- validateCard makeSimilarMsg copts (Card c)
+          name <- validPlayer popts . PlayerName $ n
+          return (card, name)
+        makeSimilarMsg (CardAndAlternatives c cs) = makeSimilarCardsMsg cs c
+        (ValidateCardOpts (AllCardSet cset) _) = copts
+        p = do
+          string "c:"
+          card <- many $ noneOf ",\n"
+          char ','
+          name <- many $ noneOf ",\n"
+          return $ validate card name
+        cardKnownFmt (Card c, PlayerName n) =
+          printf "known: card=%s,name=%s" c n
